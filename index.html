@@ -3,61 +3,810 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loan Calculator</title>
-    
-    <!-- External Dependencies -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title>Advanced Loan Calculator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <!-- Add jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-    
-    <!-- Application CSS -->
-    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- Add SheetJS for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4F46E5;
+            --secondary-color: #818CF8;
+            --background-color: #F3F4F6;
+            --text-color: #1F2937;
+            --card-background: #FFFFFF;
+            --success-color: #10B981;
+            --warning-color: #F59E0B;
+        }
+
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--card-background);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Grid System */
+        .grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+        /* Form Elements */
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input[type="number"],
+        input[type="month"],
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #F9FAFB;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-color);
+        }
+
+        .btn-outline {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            background: transparent;
+        }
+
+        .btn-outline:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Export Menu */
+        .export-menu {
+            position: relative;
+            display: inline-block;
+        }
+
+        .export-options {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--card-background);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem;
+            min-width: 150px;
+            z-index: 10;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .export-menu:hover .export-options {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .export-option {
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .export-option:hover {
+            background-color: #F3F4F6;
+        }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+
+        .toast {
+            background: var(--card-background);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1rem 1.5rem;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .toast-success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast-warning {
+            border-left: 4px solid var(--warning-color);
+        }
+
+        /* Loading Spinner */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid white;
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .grid-cols-2, .grid-cols-3, .grid-cols-4 {
+                grid-template-columns: 1fr;
+            }
+
+            .card-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .export-menu {
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1>Advanced Loan Calculator</h1>
-            <button id="themeToggle" class="theme-toggle">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-            </button>
-        </header>
-
-        <div class="tabs">
-            <button class="tab-button active" data-tab="calculator">Calculator</button>
-            <button class="tab-button" data-tab="analysis">Analysis</button>
-            <button class="tab-button" data-tab="schedule">Schedule</button>
-        </div>
-
-        <!-- Calculator Tab -->
-        <div id="calculator" class="tab-content active">
-            <!-- Previous calculator content here -->
-        </div>
-
-        <!-- Analysis Tab -->
-        <div id="analysis" class="tab-content">
-            <!-- Previous analysis content here -->
-        </div>
-
-        <!-- Schedule Tab -->
-        <div id="schedule" class="tab-content">
-            <!-- Previous schedule content here -->
-        </div>
-    </div>
-
-    <div id="toast" class="toast"></div>
-    <div id="loading-overlay" class="loading-overlay">
+    <!-- Loading Overlay -->
+    <div class="loading-overlay">
         <div class="spinner"></div>
     </div>
 
-    <!-- Application JavaScript -->
-    <script src="js/constants.js"></script>
-    <script src="js/calculations.js"></script>
-    <script src="js/charts.js"></script>
-    <script src="js/exports.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
+    <div class="container">
+        <!-- Header with Export Options -->
+        <div class="card">
+            <div class="card-header">
+                <h1 class="text-2xl font-bold">Loan Calculator</h1>
+                <div class="export-menu">
+                    <button class="btn btn-primary">
+                        Export
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12l7 7 7-7"/>
+                        </svg>
+                    </button>
+                    <div class="export-options">
+                        <div class="export-option" onclick="exportToExcel()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                            Excel (.xlsx)
+                        </div>
+                        <div class="export-option" onclick="exportToCSV()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                            CSV
+                        </div>
+                        <div class="export-option" onclick="exportToPDF()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                            PDF
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Main Calculator Interface -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="text-xl font-semibold">Original Loan Details</h2>
+            </div>
+            <div class="card-body">
+                <div class="grid grid-cols-3">
+                    <div class="info-card">
+                        <div class="text-sm text-gray-600">Sanctioned Amount</div>
+                        <div class="text-lg font-semibold">₹30,82,384</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="text-sm text-gray-600">Outstanding Amount</div>
+                        <div class="text-lg font-semibold">₹24,58,898</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="text-sm text-gray-600">Current EMI</div>
+                        <div class="text-lg font-semibold">₹31,507</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calculator Parameters -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="text-xl font-semibold">Loan Parameters</h2>
+            </div>
+            <div class="card-body">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="input-group">
+                        <label class="input-label">Interest Rate (%)</label>
+                        <input type="number" id="interestRate" value="9.61" step="0.01" min="0" max="100">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Adjustment Type</label>
+                        <select id="adjustmentType">
+                            <option value="emi">EMI Amount</option>
+                            <option value="tenure">Loan Tenure</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Step-up Configuration -->
+                <div class="card mt-4 bg-gray-50">
+                    <div class="card-header">
+                        <h3 class="text-lg font-semibold">Step-up Options</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="input-group">
+                                <label class="input-label">Step-up Type</label>
+                                <select id="stepUpType">
+                                    <option value="none">None</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="yearly">Yearly</option>
+                                    <option value="onetime">One Time</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label class="input-label">Step-up Percentage (%)</label>
+                                <input type="number" id="stepUpPercentage" value="0" step="0.1" min="0" max="100">
+                            </div>
+                            <div class="input-group" id="stepUpDateContainer">
+                                <label class="input-label">Step-up Start Date</label>
+                                <input type="month" id="stepUpDate" min="2025-02" value="2025-02">
+                            </div>
+                        </div>
+                        
+                        <!-- Step-up Preview -->
+                        <div class="mt-4" id="stepUpPreview">
+                            <div class="text-sm text-gray-600 mb-2">EMI Progression Preview</div>
+                            <div class="relative h-16 bg-gray-100 rounded overflow-hidden">
+                                <div id="stepUpGraph" class="absolute inset-0"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prepayment Section -->
+                <div class="mt-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="input-group">
+                            <label class="input-label">Prepayment Amount</label>
+                            <input type="number" id="prepaymentAmount" value="0" step="1000" min="0">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Prepayment Effect</label>
+                            <select id="prepaymentType">
+                                <option value="emi">Reduce EMI</option>
+                                <option value="tenure">Reduce Tenure</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="text-xl font-semibold">Calculation Results</h2>
+            </div>
+            <div class="card-body">
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="info-card">
+                        <div class="text-sm text-gray-600">New EMI Range</div>
+                        <div class="text-lg font-semibold">
+                            <span id="newEMIMin">₹31,507</span> - 
+                            <span id="newEMIMax">₹31,507</span>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="text-sm text-gray-600">New Tenure</div>
+                        <div id="newTenure" class="text-lg font-semibold">123 months</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="text-sm text-gray-600">Total Interest</div>
+                        <div id="totalInterest" class="text-lg font-semibold">₹0</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="text-sm text-gray-600">Total Payment</div>
+                        <div id="totalPayment" class="text-lg font-semibold">₹0</div>
+                    </div>
+                </div>
+
+                <!-- Interest Savings Comparison -->
+                <div class="mt-4 p-4 bg-gray-50 rounded">
+                    <div class="text-sm text-gray-600">Interest Savings</div>
+                    <div class="relative h-4 bg-gray-200 rounded mt-2">
+                        <div id="savingsBar" class="absolute h-full bg-green-500 rounded" style="width: 0%"></div>
+                    </div>
+                    <div class="flex justify-between mt-1">
+                        <span class="text-sm text-gray-500">Original: ₹<span id="originalInterest">0</span></span>
+                        <span class="text-sm text-gray-500">Savings: ₹<span id="interestSavings">0</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Amortization Schedule -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="text-xl font-semibold">Amortization Schedule</h2>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Date</th>
+                                <th>EMI</th>
+                                <th>Principal</th>
+                                <th>Interest</th>
+                                <th>Balance</th>
+                                <th>Step-up Applied</th>
+                            </tr>
+                        </thead>
+                        <tbody id="amortizationBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <script>
+        // Loan Constants
+        const LOAN_DETAILS = {
+            sanctionedAmount: 3082384,
+            outstandingAmount: 2458898,
+            currentEMI: 31507,
+            firstInstallment: new Date('2020-05-02'),
+            lastInstallment: new Date('2035-05-10'),
+            initialPaidEMI: 33515
+        };
+
+        // Utility Functions
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function formatDate(date) {
+            return new Date(date).toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.querySelector('.toast-container').appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Step-up Calculations
+        function calculateSteppedEMI(baseEMI, month, stepUpConfig) {
+            const {type, percentage, startDate} = stepUpConfig;
+            if (type === 'none' || !percentage) return baseEMI;
+
+            const stepUpMonth = new Date(startDate);
+            const currentDate = new Date('2025-02-14');
+            currentDate.setMonth(currentDate.getMonth() + month - 1);
+
+            if (currentDate < stepUpMonth) return baseEMI;
+
+            switch(type) {
+                case 'monthly':
+                    const monthsDiff = (currentDate.getFullYear() - stepUpMonth.getFullYear()) * 12 
+                                     + currentDate.getMonth() - stepUpMonth.getMonth();
+                    return baseEMI * Math.pow(1 + percentage/100, monthsDiff);
+                
+                case 'yearly':
+                    const yearsDiff = Math.floor((currentDate.getFullYear() - stepUpMonth.getFullYear()) 
+                                    + (currentDate.getMonth() - stepUpMonth.getMonth())/12);
+                    return baseEMI * Math.pow(1 + percentage/100, yearsDiff);
+                
+                case 'onetime':
+                    return baseEMI * (1 + percentage/100);
+                
+                default:
+                    return baseEMI;
+            }
+        }
+
+        // Export Functions
+        function exportToExcel() {
+            const schedule = generateFullSchedule();
+            const ws = XLSX.utils.json_to_sheet(schedule.map(row => ({
+                Month: row.month,
+                Date: formatDate(row.date),
+                EMI: row.payment,
+                Principal: row.principal,
+                Interest: row.interest,
+                Balance: row.balance,
+                'Step-up Applied': row.stepUpApplied ? 'Yes' : 'No'
+            })));
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Loan Schedule');
+            
+            // Add summary sheet
+            const summaryData = [{
+                'Original Loan Amount': LOAN_DETAILS.sanctionedAmount,
+                'Outstanding Amount': LOAN_DETAILS.outstandingAmount,
+                'Interest Rate': document.getElementById('interestRate').value + '%',
+                'Base EMI': LOAN_DETAILS.currentEMI,
+                'New EMI Range': `${document.getElementById('newEMIMin').textContent} - ${document.getElementById('newEMIMax').textContent}`,
+                'Total Interest': document.getElementById('totalInterest').textContent,
+                'Total Payment': document.getElementById('totalPayment').textContent
+            }];
+            
+            const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+            XLSX.writeFile(wb, 'loan_schedule.xlsx');
+            showToast('Schedule exported to Excel');
+        }
+
+        function exportToCSV() {
+            const schedule = generateFullSchedule();
+            const csvContent = "Month,Date,EMI,Principal,Interest,Balance,Step-up Applied\n" +
+                schedule.map(row => 
+                    `${row.month},${formatDate(row.date)},${row.payment},${row.principal},${row.interest},${row.balance},${row.stepUpApplied ? 'Yes' : 'No'}`
+                ).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'loan_schedule.csv';
+            link.click();
+            showToast('Schedule exported to CSV');
+        }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Add title
+            doc.setFontSize(16);
+            doc.text('Loan Amortization Schedule', 14, 20);
+
+            // Add summary
+            doc.setFontSize(12);
+            doc.text(`Outstanding Amount: ${formatCurrency(LOAN_DETAILS.outstandingAmount)}`, 14, 30);
+            doc.text(`Interest Rate: ${document.getElementById('interestRate').value}%`, 14, 35);
+            doc.text(`New EMI Range: ${document.getElementById('newEMIMin').textContent} - ${document.getElementById('newEMIMax').textContent}`, 14, 40);
+
+            // Add schedule
+            const schedule = generateFullSchedule();
+            const tableData = schedule.map(row => [
+                row.month,
+                formatDate(row.date),
+                formatCurrency(row.payment),
+                formatCurrency(row.principal),
+                formatCurrency(row.interest),
+                formatCurrency(row.balance),
+                row.stepUpApplied ? 'Yes' : 'No'
+            ]);
+
+            doc.autoTable({
+                startY: 50,
+                head: [['Month', 'Date', 'EMI', 'Principal', 'Interest', 'Balance', 'Step-up']],
+                body: tableData,
+                theme: 'grid',
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [79, 70, 229] }
+            });
+
+            doc.save('loan_schedule.pdf');
+            showToast('Schedule exported to PDF');
+        }
+
+        // Generate complete schedule for export
+        function generateFullSchedule() {
+            const interestRate = parseFloat(document.getElementById('interestRate').value);
+            const adjustmentType = document.getElementById('adjustmentType').value;
+            const prepaymentAmount = parseFloat(document.getElementById('prepaymentAmount').value) || 0;
+            const prepaymentType = document.getElementById('prepaymentType').value;
+
+            const stepUpConfig = {
+                type: document.getElementById('stepUpType').value,
+                percentage: parseFloat(document.getElementById('stepUpPercentage').value) || 0,
+                startDate: document.getElementById('stepUpDate').value
+            };
+
+            const monthlyRate = interestRate / 1200;
+            let balance = LOAN_DETAILS.outstandingAmount - prepaymentAmount;
+            let totalInterest = 0;
+            const schedule = [];
+
+            const currentDate = new Date('2025-02-14');
+            let monthsRemaining = (LOAN_DETAILS.lastInstallment.getFullYear() - currentDate.getFullYear()) * 12 + 
+                                (LOAN_DETAILS.lastInstallment.getMonth() - currentDate.getMonth());
+
+            let baseEMI = LOAN_DETAILS.currentEMI;
+            
+            if (prepaymentAmount > 0) {
+                if (prepaymentType === 'emi') {
+                    baseEMI = (balance * monthlyRate * Math.pow(1 + monthlyRate, monthsRemaining)) / 
+                            (Math.pow(1 + monthlyRate, monthsRemaining) - 1);
+                } else {
+                    monthsRemaining = Math.ceil(Math.log(baseEMI / (baseEMI - balance * monthlyRate)) / Math.log(1 + monthlyRate));
+                }
+            }
+
+            let currentBalance = balance;
+            let minEMI = baseEMI;
+            let maxEMI = baseEMI;
+
+            for (let month = 1; month <= monthsRemaining; month++) {
+                const currentEMI = calculateSteppedEMI(baseEMI, month, stepUpConfig);
+                minEMI = Math.min(minEMI, currentEMI);
+                maxEMI = Math.max(maxEMI, currentEMI);
+
+                const interest = currentBalance * monthlyRate;
+                const principal = currentEMI - interest;
+                currentBalance = currentBalance - principal;
+                totalInterest += interest;
+
+                schedule.push({
+                    month,
+                    payment: currentEMI,
+                    principal: principal,
+                    interest: interest,
+                    balance: Math.max(0, currentBalance),
+                    date: new Date(currentDate.getFullYear(), currentDate.getMonth() + month - 1, currentDate.getDate()),
+                    stepUpApplied: currentEMI > baseEMI
+                });
+            }
+
+            return schedule;
+        }
+
+        // Update UI with calculation results
+        function updateUI(schedule) {
+            const minEMI = Math.min(...schedule.map(row => row.payment));
+            const maxEMI = Math.max(...schedule.map(row => row.payment));
+            const totalInterest = schedule.reduce((sum, row) => sum + row.interest, 0);
+            const totalPayment = totalInterest + LOAN_DETAILS.outstandingAmount;
+
+            // Update summary values with animation
+            animateValue('newEMIMin', minEMI);
+            animateValue('newEMIMax', maxEMI);
+            document.getElementById('newTenure').textContent = `${schedule.length} months`;
+            animateValue('totalInterest', totalInterest);
+            animateValue('totalPayment', totalPayment);
+
+            // Update savings bar
+            const originalInterest = LOAN_DETAILS.outstandingAmount * 0.0961 * (schedule.length / 12); // Approximate original interest
+            const savings = originalInterest - totalInterest;
+            const savingsPercentage = (savings / originalInterest) * 100;
+            
+            document.getElementById('savingsBar').style.width = `${Math.max(0, savingsPercentage)}%`;
+            animateValue('originalInterest', originalInterest);
+            animateValue('interestSavings', savings);
+
+            // Update amortization table
+            updateAmortizationTable(schedule);
+        }
+
+        // Animate value changes
+        function animateValue(elementId, newValue) {
+            const element = document.getElementById(elementId);
+            const start = parseFloat(element.textContent.replace(/[^0-9.-]+/g, ''));
+            const duration = 500;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                const current = start + (newValue - start) * progress;
+                element.textContent = formatCurrency(current);
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        // Update amortization table
+        function updateAmortizationTable(schedule) {
+            const tableBody = document.getElementById('amortizationBody');
+            tableBody.innerHTML = '';
+
+            schedule.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.style.animation = `fadeIn 0.3s ease ${index * 0.05}s`;
+                tr.innerHTML = `
+                    <td>${row.month}</td>
+                    <td>${formatDate(row.date)}</td>
+                    <td>${formatCurrency(row.payment)}${row.stepUpApplied ? ' *' : ''}</td>
+                    <td>${formatCurrency(row.principal)}</td>
+                    <td>${formatCurrency(row.interest)}</td>
+                    <td>${formatCurrency(row.balance)}</td>
+                    <td>${row.stepUpApplied ? 'Yes' : 'No'}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // Initialize calculator
+        function initializeCalculator() {
+            // Set up event listeners
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.addEventListener('change', () => {
+                    const schedule = generateFullSchedule();
+                    updateUI(schedule);
+                    showToast('Calculations updated');
+                });
+            });
+
+            // Step-up type change handler
+            document.getElementById('stepUpType').addEventListener('change', function() {
+                const dateContainer = document.getElementById('stepUpDateContainer');
+                const previewContainer = document.getElementById('stepUpPreview');
+                
+                dateContainer.style.display = this.value === 'none' ? 'none' : 'block';
+                previewContainer.style.display = this.value === 'none' ? 'none' : 'block';
+            });
+
+            // Initial calculation
+            const schedule = generateFullSchedule();
+            updateUI(schedule);
+        }
+
+        // Start the calculator when page loads
+        document.addEventListener('DOMContentLoaded', initializeCalculator);
+    </script>
 </body>
 </html>
